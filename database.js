@@ -1,36 +1,50 @@
-const sqlite3 = require('sqlite3').verbose();
+const fs = require('fs');
 const path = require('path');
 
-const dbPath = path.resolve(__dirname, 'tweets.db');
-const db = new sqlite3.Database(dbPath);
+const dbPath = path.resolve(__dirname, 'processed_tweets.json');
 
+// Initialize DB (load JSON or create empty)
 function initDb() {
-    return new Promise((resolve, reject) => {
-        db.run(`CREATE TABLE IF NOT EXISTS processed_tweets (
-            id TEXT PRIMARY KEY,
-            processed_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`, (err) => {
-            if (err) reject(err);
-            else resolve();
-        });
+    return new Promise((resolve) => {
+        if (!fs.existsSync(dbPath)) {
+            fs.writeFileSync(dbPath, JSON.stringify([]));
+        }
+        resolve();
     });
 }
 
+function getProcessedTweets() {
+    try {
+        const data = fs.readFileSync(dbPath, 'utf8');
+        return JSON.parse(data);
+    } catch (err) {
+        return [];
+    }
+}
+
+function saveProcessedTweets(tweets) {
+    fs.writeFileSync(dbPath, JSON.stringify(tweets, null, 2));
+}
+
 function isTweetProcessed(id) {
-    return new Promise((resolve, reject) => {
-        db.get('SELECT id FROM processed_tweets WHERE id = ?', [id], (err, row) => {
-            if (err) reject(err);
-            else resolve(!!row);
-        });
+    return new Promise((resolve) => {
+        const tweets = getProcessedTweets();
+        resolve(tweets.includes(id));
     });
 }
 
 function markTweetAsProcessed(id) {
-    return new Promise((resolve, reject) => {
-        db.run('INSERT OR IGNORE INTO processed_tweets (id) VALUES (?)', [id], (err) => {
-            if (err) reject(err);
-            else resolve();
-        });
+    return new Promise((resolve) => {
+        const tweets = getProcessedTweets();
+        if (!tweets.includes(id)) {
+            tweets.push(id);
+            // Keep file size manageable (keep last 1000 IDs)
+            if (tweets.length > 1000) {
+                tweets.shift();
+            }
+            saveProcessedTweets(tweets);
+        }
+        resolve();
     });
 }
 

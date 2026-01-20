@@ -1,0 +1,44 @@
+name: Run News Bot
+
+on:
+  schedule:
+    # Run every 20 minutes (GitHub Actions cron minimum is usually 5-10 mins but can vary)
+    - cron: '*/20 * * * *'
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Create .env file
+      run: |
+        echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
+        echo "TELEGRAM_CHANNEL_ID=${{ secrets.TELEGRAM_CHANNEL_ID }}" >> .env
+        echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+        echo "TARGET_TWITTER_HANDLES=${{ secrets.TARGET_TWITTER_HANDLES }}" >> .env
+
+    - name: Run Bot (Once)
+      run: node index.js --once
+    
+    - name: Commit and Push Database Changes
+      run: |
+        git config --global user.name 'News Bot Action'
+        git config --global user.email 'action@github.com'
+        git add processed_tweets.json
+        # Only commit if there are changes
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Update processed tweets [skip ci]" && git push)
