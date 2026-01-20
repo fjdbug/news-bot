@@ -1,0 +1,4 @@
+node_modules/
+.env
+tweets.db
+.DS_Store
