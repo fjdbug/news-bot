@@ -1,7 +1,5 @@
 node_modules/
 .env
-node_modules/
-.env
 tweets.db
 # We DO want to commit processed_tweets.json so the bot remembers state
 # processed_tweets.json

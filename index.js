@@ -32,13 +32,23 @@ async function runJob() {
 async function main() {
     await initDb();
 
-    // Run immediately on startup
-    await runJob();
+    // Check if running in "Once" mode (for GitHub Actions)
+    const runOnce = process.argv.includes('--once') || process.env.GITHUB_ACTIONS;
 
-    // Schedule every 10 minutes
-    cron.schedule('*/10 * * * *', () => {
-        runJob();
-    });
+    if (runOnce) {
+        console.log("Running in single-execution mode for GitHub Actions...");
+        await runJob();
+        // Successful exit
+        process.exit(0);
+    } else {
+        // Run immediately on startup
+        await runJob();
+
+        // Schedule every 10 minutes
+        cron.schedule('*/10 * * * *', () => {
+            runJob();
+        });
+    }
 }
 
 main();
